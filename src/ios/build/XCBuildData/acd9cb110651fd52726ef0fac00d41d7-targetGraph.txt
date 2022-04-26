@@ -1,2 +1,0 @@
-Target dependency graph (1 target)
-plugin_vungle_v6 in Plugin, no dependencies

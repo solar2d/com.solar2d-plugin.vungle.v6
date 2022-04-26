@@ -1,85 +1,61 @@
-# samsung-iap.* &mdash; Samsung IAP
+# vungle.*
 
 > --------------------- ------------------------------------------------------------------------------------------
 > __Type__              [Library][api.type.Library]
 > __Revision__          [REVISION_LABEL](REVISION_URL)
-> __Keywords__          IAP, Samsung IAP, Samsung In App Purchase
-> __Platforms__			Android
-> __Sample__			[https://github.com/solar2d/plugins-sample-samsung-iap](https://github.com/solar2d/plugins-sample-samsung-iap)
+> __Keywords__          ads, advertising, Vungle
+> __Platforms__			Android, iOS
 > --------------------- ------------------------------------------------------------------------------------------
 
 
 ## Overview
 
-The Samsung IAP plugin let you make in app purchases via Samsung's App Store.
+The Vungle plugin offers easy integration of Vungle video ads.
 
+<div class="guide-notebox-imp">
+<div class="notebox-title-imp">Important</div>
 
+This documentation is for the new Vungle Plugin(v6), click to view the [Vungle legacy plugin][plugin.vungle]
 
-## Registration/Setup
+Notable changes from old plugin includes all [event.type][plugin.unityads-v4.event.adsRequest.type] name being changed and moved to [event.phase][plugin.unityads-v4.event.adsRequest.phase]. Also these events have been removed: `event.isAdPlayable`, `event.didDownload`, `event.completedView` and [vungle.init()][plugin.vungle-v6.init] has been simplified
 
-In order to test and use In App Purchases you must [setup a Samsung Seller Account](https://seller.samsungapps.com/), create a listing to test and deploy your app for on to the Samsung App Store. Under your [Seller Profile](https://seller.samsungapps.com/member/getSellerDetail.as) be sure add the Samsung email(s) you plan to use to test under License Test. Also you need to upload an initial binary/apk for your app in order to create and test IAP products.
+</div>
 
-## Gotchas
+## Registration
 
-While Samsung IAP does not require server, in order to verify and get receipt data you can follow [Samsung IAP Server Guide](https://developer.samsung.com/iap/programming-guide/samsung-iap-server-api.html)
+Using Vungle video ads requires a free account &mdash; please [register](https://dashboard.vungle.com/dashboard/) before proceeding.
 
-
-## Syntax
-
-	local store = require( "plugin.samsung.iap" )
-
-## Properties
-
-#### [store.target][plugin.samsung-iap.target]
-
-#### [store.isActive][plugin.samsung-iap.isActive]
-
-#### [store.canLoadProducts][plugin.samsung-iap.canLoadProducts]
-
-#### [store.canMakePurchases][plugin.samsung-iap.canMakePurchases]
 
 ## Functions
 
-#### [store.init()][plugin.samsung-iap.init]
+#### [vungle.init()][plugin.vungle-v6.init]
 
-#### [store.loadProducts()][plugin.samsung-iap.loadProducts]
+#### [vungle.load()][plugin.vungle-v6.load]
 
-#### [store.purchase()][plugin.samsung-iap.purchase]
+#### [vungle.show()][plugin.vungle-v6.show]
 
-#### [store.restore()][plugin.samsung-iap.restore]
+#### [vungle.isLoaded()][plugin.vungle-v6.isLoaded]
 
-#### [store.consumePurchase()][plugin.samsung-iap.consumePurchase]
+#### [vungle.setHasUserConsent()][plugin.vungle-v6.setHasUserConsent]
+
+#### [vungle.getVersionString()][plugin.vungle-v6.getVersionString]
+
 
 ## Events
 
-#### [init][plugin.samsung-iap.event.init]
+#### [adsRequest][plugin.vungle-v6.event.adsRequest]
 
-#### [storeTransaction][plugin.samsung-iap.event.storeTransaction]
-
-#### [productList][plugin.samsung-iap.event.productList]
 
 ## Project Settings
 
 To use this plugin, add an entry into the `plugins` table of `build.settings`. When added, the build server will integrate the plugin during the build phase.
 
-``````lua
+``````{ brush="lua" gutter="false" first-line="1" highlight="[5,6,7,8]" }
 settings =
 {
-	android =
-	{
-			manifestChildElements =
-      {
-					--Needed for newer versions of Android
-          [[
-						<queries>
-						   <package android:name="com.sec.android.app.samsungapps" />
-						</queries>
-          ]],
-      },
-	},
 	plugins =
 	{
-		["plugin.samsung.iap"] =
+		["plugin.vungle.v6"] =
 		{
 			publisherId = "com.solar2d"
 		},
@@ -93,13 +69,12 @@ settings =
 For Android, the following permissions/features are automatically added when using this plugin:
 
 * `"android.permission.INTERNET"`
-* `"com.samsung.android.iap.permission.BILLING"`
-
+* `"android.permission.ACCESS_NETWORK_STATE"`
 
 </div>
 
 
 ## Support
 
-* [https://developer.samsung.com/iap](https://developer.samsung.com/iap)
-* [Solar2D Forums](https://forums.solar2d.com/c/corona-marketplace/13)
+* [Forums](https://forums.solar2d.com/c/solar2d/monetization-in-app-purchases-ads-etc/42)
+* [https://v.vungle.com/](https://v.vungle.com)

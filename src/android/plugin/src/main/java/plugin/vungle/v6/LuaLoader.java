@@ -63,7 +63,7 @@ public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
 	// LUA method names
 	static final String GET_VERSION_STRING_METHOD = "getVersionString";
 	static final String INIT_METHOD = "init";
-	static final String IS_AD_AVAILABLE_METHOD = "isAdAvailable";
+	static final String IS_AD_AVAILABLE_METHOD = "isLoaded";
 	static final String SHOW_METHOD = "show";
     static final String LOAD_METHOD = "load";
     static final String CLOSE_METHOD = "closeAd";
@@ -71,28 +71,30 @@ public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
     static final String CLEAR_SLEEP_METHOD = "clearSleep";
     static final String ENABLE_LOGGING_METHOD = "enableLogging";
     static final String SUBSCRIBE_HB_METHOD = "subscribeHB";
-    static final String UPDATE_CONSENT_STATUS = "updateConsentStatus";
+    static final String UPDATE_CONSENT_STATUS = "setHasUserConsent";
     static final String GET_CONSENT_STATUS = "getConsentStatus";
     static final String GET_CONSENT_MESSAGE_VERSION = "getConsentMessageVersion";
 
 	// events
-	static final String EVENT_TYPE_KEY = "type";
-	static final String AD_START_EVENT_TYPE = "adStart";
-    static final String AD_END_EVENT_TYPE = "adEnd";
-	static final String AD_UNABLE_TYPE = "unableToPlayAd";
-    static final String AD_AVAILABLE_EVENT_TYPE = "adAvailable";
-    static final String AD_INITIALIZE_TYPE = "adInitialize";
-    static final String AD_INIT_FAILURE_TYPE = "adInitFailure";
+	static final String EVENT_PHASE_KEY = "phase";
+	static final String AD_DISPLAYED_EVENT_PHASE = "displayed";
+    static final String AD_COMPLETED_EVENT_PHASE = "completed";
+	static final String AD_FAILED_PHASE = "failed";
+    static final String AD_LOADED_EVENT_PHASE = "loaded";
+    static final String AD_INITIALIZE_PHASE = "init";
+    static final String AD_CLICKED_PHASE = "clicked";
+    static final String AD_REWARD_PHASE = "userReceivedReward";
+    static final String AD_VUNGLE_CREATIVE_EVENT_PHASE = "adVungleCreative";
+
+    static final String EVENT_TYPE_KEY = "type";
+    static final String EVENT_TYPE_VALUE = "vungle";
 
     static final String AD_VIEW_IS_COMPLETED_VIEW_KEY = "completedView";
     static final String AD_PLACEMENT_ID_KEY = "placementID";
-	static final String AD_VIEW_SECONDS_WATCHED_KEY = "secondsWatched";
-	static final String AD_VIEW_TOTAL_AD_SECONDS_KEY = "totalAdSeconds";
 	static final String CORONA_AD_PROVIDER_NAME = "vungle";
-	static final String WAS_CALL_TO_ACTION_CLICKED_KEY = "didDownload";
-    static final String IS_AD_AVAILABLE_KEY = "isAdPlayable";
+
     
-    static final String AD_REASON_KEY = "reason";
+    static final String AD_RESPONSE_KEY = "response";
 
 	private static final String DEFAULT_CORONA_APPLICATION_ID = "defaultCoronaApplicationId";
 
@@ -116,13 +118,13 @@ public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
 			new ShowWrapper(),
             new LoadWrapper(),
             new UpdateConsentStatusWrapper(),
-            new GetConsentStatusWrapper(),
-            new GetConsentMessageVersionWrapper(),
-            new CloseWrapper(),
-            new ClearCacheWrapper(),
-            new ClearSleepWrapper(),
+            new GetConsentStatusWrapper(),  //hidden
+            new GetConsentMessageVersionWrapper(), //hidden
+            new CloseWrapper(), //deperated
+            new ClearCacheWrapper(),//hidden
+            new ClearSleepWrapper(),//hidden
             new EnableLoggingWrapper(),
-            new SubscribeHBWrapper(),
+            new SubscribeHBWrapper(), //hidden
 		});
 		// add fallback test app id
 		luaState.pushString(DEFAULT_CORONA_APPLICATION_ID);
@@ -142,14 +144,16 @@ public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
 		}
 	}
 
-    private LuaState createBaseEvent(CoronaRuntime coronaRuntime, String eventType, boolean isError) {
+    private LuaState createBaseEvent(CoronaRuntime coronaRuntime, String eventPhase, boolean isError) {
         final LuaState luaState = coronaRuntime.getLuaState();
         CoronaLua.newEvent(luaState, CoronaLuaEvent.ADSREQUEST_TYPE);
         luaState.pushString(CORONA_AD_PROVIDER_NAME);
         luaState.setField(-2, CoronaLuaEvent.PROVIDER_KEY);
         luaState.pushBoolean(isError);
         luaState.setField(-2, CoronaLuaEvent.ISERROR_KEY);
-        luaState.pushString(eventType);
+        luaState.pushString(eventPhase);
+        luaState.setField(-2, EVENT_PHASE_KEY);
+        luaState.pushString(EVENT_TYPE_VALUE);
         luaState.setField(-2, EVENT_TYPE_KEY);
         return luaState;
     }
@@ -166,21 +170,12 @@ public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
 	 */
 	public int init(LuaState luaState) {
 		int nextArg = 1;
-		final String provider = luaState.toString(nextArg);
-		if(provider!=null && provider.equals("vungle")) {
-			// skip legacy provider name
+		String applicationId = this.applicationId;
+		if(luaState.isString(nextArg)) {
+            applicationId = luaState.toString(nextArg);
 			nextArg++;
 		}
 
-        final String params = luaState.toString(nextArg++);
-        
-        final String[] parts = params.split(",");
-        if (parts.length == 0)
-            return 0;
-        final String applicationId = this.applicationId = parts[0];
-        final List<String> placements = new ArrayList<String>();
-        for (int i = 1; i < parts.length; i++)
-            placements.add(parts[i].trim());
         
 		if (CoronaLua.isListener(luaState, nextArg, CoronaLuaEvent.ADSREQUEST_TYPE)) {
 			luaListener = CoronaLua.newRef(luaState, nextArg);
@@ -195,12 +190,12 @@ public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
                     taskDispatcher.send(new CoronaRuntimeTask() {
                         @Override
                         public void executeUsing(CoronaRuntime coronaRuntime) {
-                            final String eventType = AD_INITIALIZE_TYPE;
+                            final String eventPhase = AD_INITIALIZE_PHASE;
                             try {
-                                final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventType, false);
+                                final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventPhase, false);
                                 CoronaLua.dispatchEvent(asyncLuaState, luaListener, 0);
                             } catch (Exception exception) {
-                                Log.e(TAG, "Unable to dispatch event " + eventType, exception);
+                                Log.e(TAG, "Unable to dispatch event " + eventPhase, exception);
                             }
                         }
                     });
@@ -211,12 +206,12 @@ public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
                 taskDispatcher.send(new CoronaRuntimeTask() {
                     @Override
                     public void executeUsing(CoronaRuntime coronaRuntime) {
-                        final String eventType = AD_INIT_FAILURE_TYPE;
+                        final String eventPhase = AD_INITIALIZE_PHASE;
                         try {
-                            final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventType, false);
+                            final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventPhase, true);
                             CoronaLua.dispatchEvent(asyncLuaState, luaListener, 0);
                         } catch (Exception exception) {
-                            Log.e(TAG, "Unable to dispatch event " + eventType, exception);
+                            Log.e(TAG, "Unable to dispatch event " + eventPhase, exception);
                         }
                     }
                 });
@@ -227,17 +222,15 @@ public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
                 taskDispatcher.send(new CoronaRuntimeTask() {
                     @Override
                     public void executeUsing(CoronaRuntime coronaRuntime) {
-                        final String eventType = AD_AVAILABLE_EVENT_TYPE;
+                        final String eventPhase = AD_LOADED_EVENT_PHASE;
                         try {
-                            final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventType, false);
+                            final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventPhase, false);
                             asyncLuaState.pushString(placementId);
                             asyncLuaState.setField(-2, AD_PLACEMENT_ID_KEY);
-                            
-                            asyncLuaState.pushBoolean(true);
-                            asyncLuaState.setField(-2, IS_AD_AVAILABLE_KEY);
+
                             CoronaLua.dispatchEvent(asyncLuaState, luaListener, 0);
                         } catch (Exception exception) {
-                            Log.e(TAG, "Unable to dispatch event " + eventType, exception);
+                            Log.e(TAG, "Unable to dispatch event " + eventPhase, exception);
                         }
                     }
                 });
@@ -302,17 +295,15 @@ public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
                     taskDispatcher.send(new CoronaRuntimeTask() {
                         @Override
                         public void executeUsing(CoronaRuntime coronaRuntime) {
-                            final String eventType = AD_AVAILABLE_EVENT_TYPE;
+                            final String eventPhase = AD_LOADED_EVENT_PHASE;
                             try {
-                                final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventType, false);
+                                final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventPhase, false);
                                 asyncLuaState.pushString(placementId);
                                 asyncLuaState.setField(-2, AD_PLACEMENT_ID_KEY);
-                                
-                                asyncLuaState.pushBoolean(true);
-                                asyncLuaState.setField(-2, IS_AD_AVAILABLE_KEY);
+
                                 CoronaLua.dispatchEvent(asyncLuaState, luaListener, 0);
                             } catch (Exception exception) {
-                                Log.e(TAG, "Unable to dispatch event " + eventType, exception);
+                                Log.e(TAG, "Unable to dispatch event " + eventPhase, exception);
                             }
                         }
                     });
@@ -322,17 +313,17 @@ public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
                     taskDispatcher.send(new CoronaRuntimeTask() {
                         @Override
                         public void executeUsing(CoronaRuntime coronaRuntime) {
-                            final String eventType = AD_AVAILABLE_EVENT_TYPE;
+                            final String eventPhase = AD_FAILED_PHASE;
                             try {
-                                final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventType, false);
+                                final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventPhase, true);
                                 asyncLuaState.pushString(placementId);
                                 asyncLuaState.setField(-2, AD_PLACEMENT_ID_KEY);
-                                
-                                asyncLuaState.pushBoolean(false);
-                                asyncLuaState.setField(-2, IS_AD_AVAILABLE_KEY);
+
+                                asyncLuaState.pushString(exception.getLocalizedMessage());
+                                asyncLuaState.setField(-2, AD_RESPONSE_KEY);
                                 CoronaLua.dispatchEvent(asyncLuaState, luaListener, 0);
                             } catch (Exception exception) {
-                                Log.e(TAG, "Unable to dispatch event " + eventType, exception);
+                                Log.e(TAG, "Unable to dispatch event " + eventPhase, exception);
                             }
                         }
                     });
@@ -350,7 +341,11 @@ public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
         }
         @Override
         public int invoke(LuaState luaState) {
-            Vungle.updateConsentStatus((luaState.toInteger(1) == 1)?Vungle.Consent.OPTED_IN:Vungle.Consent.OPTED_OUT,luaState.toString(2));
+            String version = "1.0.0";
+            if(luaState.isString(2)){
+                version = luaState.toString(2);
+            }
+            Vungle.updateConsentStatus(luaState.toBoolean(1)?Vungle.Consent.OPTED_IN:Vungle.Consent.OPTED_OUT,version);
             return 1;
         }
     }
@@ -475,7 +470,7 @@ public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
                 taskDispatcher.send(new CoronaRuntimeTask() {
                     @Override
                     public void executeUsing(CoronaRuntime coronaRuntime) {
-                        final String eventType = AD_START_EVENT_TYPE;
+                        final String eventType = AD_DISPLAYED_EVENT_PHASE;
                         try {
                             final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventType, false);
                             asyncLuaState.pushString(placementId);
@@ -493,47 +488,103 @@ public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
                 taskDispatcher.send(new CoronaRuntimeTask() {
                     @Override
                     public void executeUsing(CoronaRuntime coronaRuntime) {
-                        final String eventType = AD_END_EVENT_TYPE;
+                        final String eventPhase = AD_COMPLETED_EVENT_PHASE;
                         try {
-                            final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventType, false);
+                            final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventPhase, false);
                             asyncLuaState.pushString(placementId);
                             asyncLuaState.setField(-2, AD_PLACEMENT_ID_KEY);
-                            
-                            asyncLuaState.pushBoolean(wasSuccessfulView);
-                            asyncLuaState.setField(-2, AD_VIEW_IS_COMPLETED_VIEW_KEY);
-                            
-                            asyncLuaState.pushBoolean(wasCallToActionClicked);
-                            asyncLuaState.setField(-2, WAS_CALL_TO_ACTION_CLICKED_KEY);
+
+
                             CoronaLua.dispatchEvent(asyncLuaState, luaListener, 0);
                         } catch (Exception exception) {
-                            Log.e(TAG, "Unable to dispatch event " + eventType, exception);
+                            Log.e(TAG, "Unable to dispatch event " + eventPhase, exception);
                         }
                     }
                 });
             }
             @Override
             public void creativeId(String creativeId) {
-                // Not used yet
+                if (luaListener == CoronaLua.REFNIL) return;
+                taskDispatcher.send(new CoronaRuntimeTask() {
+                    @Override
+                    public void executeUsing(CoronaRuntime coronaRuntime) {
+                        final String eventPhase = AD_VUNGLE_CREATIVE_EVENT_PHASE;
+                        try {
+                            final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventPhase, false);
+                            asyncLuaState.pushString(creativeId);
+                            asyncLuaState.setField(-2, "creativeID");
+
+                            CoronaLua.dispatchEvent(asyncLuaState, luaListener, 0);
+                        } catch (Exception exception) {
+                            Log.e(TAG, "Unable to dispatch event " + eventPhase, exception);
+                        }
+                    }
+                });
             }
             @Override
             public void onAdEnd(String placementId) {
-                // Ad experience ended
+                if (luaListener == CoronaLua.REFNIL) return;
+                taskDispatcher.send(new CoronaRuntimeTask() {
+                    @Override
+                    public void executeUsing(CoronaRuntime coronaRuntime) {
+                        final String eventPhase = AD_COMPLETED_EVENT_PHASE;
+                        try {
+                            final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventPhase, false);
+                            asyncLuaState.pushString(placementId);
+                            asyncLuaState.setField(-2, AD_PLACEMENT_ID_KEY);
+
+                            CoronaLua.dispatchEvent(asyncLuaState, luaListener, 0);
+                        } catch (Exception exception) {
+                            Log.e(TAG, "Unable to dispatch event " + eventPhase, exception);
+                        }
+                    }
+                });
             }
             @Override
             public void onAdClick(String placementId) {
-                // User clicked on ad
+                if (luaListener == CoronaLua.REFNIL) return;
+                taskDispatcher.send(new CoronaRuntimeTask() {
+                    @Override
+                    public void executeUsing(CoronaRuntime coronaRuntime) {
+                        final String eventPhase = AD_CLICKED_PHASE;
+                        try {
+                            final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventPhase, false);
+                            asyncLuaState.pushString(placementId);
+                            asyncLuaState.setField(-2, AD_PLACEMENT_ID_KEY);
+
+                            CoronaLua.dispatchEvent(asyncLuaState, luaListener, 0);
+                        } catch (Exception exception) {
+                            Log.e(TAG, "Unable to dispatch event " + eventPhase, exception);
+                        }
+                    }
+                });
             }
             @Override
             public void onAdRewarded(String placementId) {
-                // User earned reward for watching an rewarded ad
+                if (luaListener == CoronaLua.REFNIL) return;
+                taskDispatcher.send(new CoronaRuntimeTask() {
+                    @Override
+                    public void executeUsing(CoronaRuntime coronaRuntime) {
+                        final String eventPhase = AD_REWARD_PHASE;
+                        try {
+                            final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventPhase, false);
+                            asyncLuaState.pushString(placementId);
+                            asyncLuaState.setField(-2, AD_PLACEMENT_ID_KEY);
+
+                            CoronaLua.dispatchEvent(asyncLuaState, luaListener, 0);
+                        } catch (Exception exception) {
+                            Log.e(TAG, "Unable to dispatch event " + eventPhase, exception);
+                        }
+                    }
+                });
             }
             @Override
             public void onAdLeftApplication(String placementId) {
-                // User has left app during an ad experience
+                //not used
             }
             @Override
             public void onAdViewed(String placementId) {
-                // Ad has rendered
+                //not used
             }
             @Override
             public void onError(final String placementId, final VungleException error) {
@@ -541,17 +592,17 @@ public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
                 taskDispatcher.send(new CoronaRuntimeTask() {
                     @Override
                     public void executeUsing(CoronaRuntime coronaRuntime) {
-                        final String eventType = AD_UNABLE_TYPE;
+                        final String eventPhase = AD_FAILED_PHASE;
                         try {
-                            final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventType, false);
+                            final LuaState asyncLuaState = createBaseEvent(coronaRuntime, eventPhase, true);
                             asyncLuaState.pushString(placementId);
                             asyncLuaState.setField(-2, AD_PLACEMENT_ID_KEY);
                             
                             asyncLuaState.pushString((error != null)?error.getLocalizedMessage():"");
-                            asyncLuaState.setField(-2, AD_REASON_KEY);
+                            asyncLuaState.setField(-2, AD_RESPONSE_KEY);
                             CoronaLua.dispatchEvent(asyncLuaState, luaListener, 0);
                         } catch (Exception exception) {
-                            Log.e(TAG, "Unable to dispatch event " + eventType, exception);
+                            Log.e(TAG, "Unable to dispatch event " + eventPhase, exception);
                         }
                     }
                 });

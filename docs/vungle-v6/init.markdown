@@ -1,72 +1,53 @@
-# store.init()
+# vungle.init()
 
 > --------------------- ------------------------------------------------------------------------------------------
 > __Type__              [Function][api.type.Function]
 > __Return value__      none
 > __Revision__          [REVISION_LABEL](REVISION_URL)
-> __Keywords__           IAP, Samsung IAP, Samsung In App Purchase, init
-> __See also__          [store.loadProducts()][plugin.samsung-iap.loadProducts]
->						[store.purchase()][plugin.samsung-iap.purchase]
->						[store.loadProducts()][plugin.samsung-iap.purchase]
->						[store.*][plugin.samsung-iap]
+> __Keywords__          ads, advertising, Vungle
+> __See also__          [vungle.load()][plugin.vungle-v6.load]
+>						[vungle.show()][plugin.vungle-v6.show]
+>						[vungle.*][plugin.vungle-v6]
 > --------------------- ------------------------------------------------------------------------------------------
 
 
 ## Overview
 
-Initialize the Samsung IAP plugin and set store operation mode. This step is mandatory before any other methods can be used.
+`vungle.init()` initializes the Vungle plugin. This call is required and must be executed before making other Vungle calls such as [vungle.load()][plugin.vungle-v6.load] or [vungle.show()][plugin.vungle-v6.show].
 
 
 ## Syntax
 
-	store.init( listener [,operationMode] )
-
-##### listener ~^(required)^~
-_[Listener][api.type.Listener]._ The listener that will handle [storeTransaction][plugin.samsung-iap.event.storeTransaction] events.
+	vungle.init( appID [, adListener] )
 
 
-##### operationMode ~^(optional)^~
-_[String][api.type.String]._ can be set to "testMode", "testFailureMode", or "production"(default).
+##### appID ~^(required)^~
+_[String][api.type.String]._  The App ID for your app, gathered from the Vungle dashboard.
 
-"testMode": financial transactions do not occur (licensed testers are not billed for item purchases), and successful results are always returned.
+##### adListener ~^(optional)^~
+_[Listener][api.type.Listener]._ The [function][api.type.Function] or [table][api.type.Table] that will handle [adsRequest][plugin.vungle-v6.event.adsRequest] lifecycle events from the Vungle plugin.
 
-"testFailureMode" : meant to be a negative testing to ensure that your app can handle errors
-
-"production" : requests are processed as specified, financial transactions do occur for successful requests, and actual results are returned
 
 ## Example
 
 ``````lua
-local store = require( "plugin.samsung.iap" )
-local json = require( "json" )
+local vungle = require( "plugin.vungle.v6" )
 
-local function transactionListener( event )
+local appID
+if ( system.getInfo("platform") == "android" ) then
+	appID = "YOUR_ANDROID_APP_ID"
+else
+	appID = "YOUR_IOS_APP_ID"
+end
 
-	-- Samsung IAP initialization event
-	if ( event.name == "init" ) then
+-- Vungle listener function
+local function adListener( event )
 
-		if not ( event.transaction.isError ) then
-			-- Perform steps to enable IAP, load products, etc.
-
-		else  -- Unsuccessful initialization; output error details
-			print( event.transaction.errorType )
-			print( event.transaction.errorString )
-		end
-
-	-- Store transaction event
-	elseif ( event.name == "storeTransaction" ) then
-
-		if not ( event.transaction.state == "failed" ) then  -- Successful transaction
-			print( json.prettify( event ) )
-			print( "event.transaction: " .. json.prettify( event.transaction ) )
-
-		else  -- Unsuccessful transaction; output error details
-			print( event.transaction.errorType )
-			print( event.transaction.errorString )
-		end
+	if ( event.phase == "init" ) then  -- Successful initialization
+		print( event.provider )
 	end
 end
 
--- Initialize Samsung IAP with test
-store.init( transactionListener, "testMode" )
+-- Initialize the Vungle plugin
+vungle.init( appID, adListener )
 ``````

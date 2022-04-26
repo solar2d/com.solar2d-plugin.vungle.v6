@@ -25,21 +25,24 @@
 #define GetStringParamOrNil( _x_ ) ( _x_ != NULL && strlen( _x_ ) ) ? [NSString stringWithUTF8String:_x_] : nil
 
 // events
-static const NSString* kEVENT_TYPE_KEY = @"type";
-static const NSString* kAD_START_EVENT_TYPE = @"adStart";
-static const NSString* kAD_END_EVENT_TYPE = @"adEnd";
-static const NSString* kAD_AVAILABLE_EVENT_TYPE = @"adAvailable";
-static const NSString* kAD_INITIALIZE_EVENT_TYPE = @"adInitialize";
-static const NSString* kAD_LOG_EVENT_TYPE = @"adLog";
-static const NSString* kAD_PLACEMENT_PREPARED_EVENT_TYPE = @"adPlacementPrepared";
-static const NSString* kAD_VUNGLE_CREATIVE_EVENT_TYPE = @"adVungleCreative";
+static const NSString* EVENT_PHASE_KEY = @"phase";
+static const NSString* AD_DISPLAYED_EVENT_PHASE = @"displayed";
+static const NSString* AD_COMPLETED_EVENT_PHASE = @"completed";
+static const NSString* AD_FAILED_PHASE = @"failed";
+static const NSString* AD_LOADED_EVENT_PHASE = @"loaded";
+static const NSString* AD_INITIALIZE_PHASE = @"init";
+static const NSString* AD_CLICKED_PHASE = @"clicked";
+static const NSString* AD_REWARD_PHASE = @"userReceivedReward";
+static const NSString* AD_LOG_EVENT_PHASE = @"adLog";
+static const NSString* AD_VUNGLE_CREATIVE_EVENT_PHASE = @"adVungleCreative";
+static const NSString* AD_RESPONSE_KEY = @"response";
 
-static const NSString* kVERSION = @"6_0_0";//plugin version. Do not delete this comment
+static const NSString* kVERSION = @"6_10_6";//plugin version. Do not delete this comment
 
 // ----------------------------------------------------------------------------
 
 CORONA_EXPORT
-int luaopen_plugin_vungle( lua_State *L )
+int luaopen_plugin_vungle_v6( lua_State *L )
 {
 	return Corona::Vungle::Open( L );
 }
@@ -48,65 +51,56 @@ int luaopen_plugin_vungle( lua_State *L )
 @synthesize vungle;
 
 - (void)vungleDidCloseAdWithViewInfo:(nonnull VungleViewInfo *)info placementID:(nonnull NSString *)placementID {
-//    NSNumber* playTime = [info playTime];
-    NSLog(@"vungleDidCloseAdWithViewInfo");
-    NSNumber* completedView = [info completedView];
-    NSNumber* didDownload = [info didDownload];
+
     if (placementID == nil)
         placementID = @"";
-    vungle->DispatchEvent(false, [kAD_END_EVENT_TYPE UTF8String], @{@"placementID":placementID, @"completedView":completedView, @"didDownload":didDownload});
+    vungle->DispatchEvent(false, [AD_COMPLETED_EVENT_PHASE UTF8String], @{@"placementID":placementID});
 }
 
 - (void)vungleWillShowAdForPlacementID:(nullable NSString *)placementID {
-    NSLog(@"vungleWillShowAdForPlacementID");
     if (placementID == nil)
         placementID = @"";
-    vungle->DispatchEvent(false, [kAD_START_EVENT_TYPE UTF8String], @{@"placementID":placementID});
+    vungle->DispatchEvent(false, [AD_DISPLAYED_EVENT_PHASE UTF8String], @{@"placementID":placementID});
 }
 
 - (void)vungleAdPlayabilityUpdate:(BOOL)isAdPlayable placementID:(nullable NSString *)placementID error:(nullable NSError *)error {
-    NSLog(@"vungleAdPlayabilityUpdate");
     if (placementID == nil)
         placementID = @"";
-    vungle->DispatchEvent(false, [kAD_AVAILABLE_EVENT_TYPE UTF8String], @{@"placementID":placementID, @"isAdPlayable":[NSNumber numberWithBool:isAdPlayable]});
+    if(error){
+        vungle->DispatchEvent(true, [AD_FAILED_PHASE UTF8String], @{@"placementID":placementID, AD_RESPONSE_KEY:error.description});
+    }else if (isAdPlayable){
+        vungle->DispatchEvent(false, [AD_LOADED_EVENT_PHASE UTF8String], @{@"placementID":placementID});
+    }else{
+        vungle->DispatchEvent(true, [AD_FAILED_PHASE UTF8String], @{@"placementID":placementID});
+    }
+    
 }
 
 - (void)vungleSDKDidInitialize {
-    NSLog(@"vungleSDKDidInitialize");
-    vungle->DispatchEvent(false, [kAD_INITIALIZE_EVENT_TYPE UTF8String]);
+    vungle->DispatchEvent(false, [AD_INITIALIZE_PHASE UTF8String]);
 }
 @end
 
 @implementation VungleCoronaLogger
 @synthesize vungle;
 - (void)vungleSDKLog:(NSString *)message {
-    vungle->DispatchEvent(false, [kAD_LOG_EVENT_TYPE UTF8String], @{@"message": message});
+    vungle->DispatchEvent(false, [AD_LOG_EVENT_PHASE UTF8String], @{@"message": message});
 }
 @end
 
 @implementation VungleCreativeTracking
 @synthesize vungle;
 - (void)vungleCreative:(nullable NSString *)creativeID readyForPlacement:(nullable NSString *)placementID {
-    NSLog(@"vungleCreative");
-    if (placementID == nil)
-        placementID = @"";
     if (creativeID == nil)
         creativeID = @"";
-    vungle->DispatchEvent(false, [kAD_VUNGLE_CREATIVE_EVENT_TYPE UTF8String], @{@"placementID":placementID, @"creativeID":creativeID});
+    vungle->DispatchEvent(false, [AD_VUNGLE_CREATIVE_EVENT_PHASE UTF8String], @{ @"creativeID":creativeID});
 }
 @end
 
 @implementation VungleHeaderBidding
 @synthesize vungle;
 - (void)placementPrepared:(NSString *)placement withBidToken:(NSString *)bidToken {
-    NSLog(@"placementPrepared");
-    if (placement == nil)
-        placement = @"";
-    if (bidToken == nil)
-        bidToken = @"";
-    dispatch_async(dispatch_get_main_queue(), ^{
-        vungle->DispatchEvent(false, [kAD_PLACEMENT_PREPARED_EVENT_TYPE UTF8String], @{@"placementID":placement, @"bidToken":bidToken});
-    });
+    //unused
 }
 @end
 
@@ -347,12 +341,14 @@ int Vungle::Load(lua_State* L) {
 }
 
 int Vungle::updateConsentStatus(lua_State* L) {
-    int status = lua_tointeger( L, 1 );
-    const char *str = lua_tostring( L, 2 );
-    NSString* versionString= [NSString stringWithUTF8String:str];
-    if (status == 1)
+    bool status = lua_toboolean(L, 1);
+    NSString* versionString= [NSString stringWithUTF8String:"1.0.0"];
+    if(lua_isstring(L, 2)){
+        versionString= [NSString stringWithUTF8String:lua_tostring(L, 2)];
+    }
+    if (status == true)
         [[VungleSDK sharedSDK] updateConsentStatus:VungleConsentAccepted consentMessageVersion:versionString];
-    else if (status == 2)
+    else
         [[VungleSDK sharedSDK] updateConsentStatus:VungleConsentDenied consentMessageVersion:versionString];
     lua_pushboolean(L, TRUE);
     return 1;
@@ -498,7 +494,7 @@ Vungle::DispatchEvent(bool isError, const char* eventName, NSDictionary* opts) c
     
 	if (eventName) {
 		lua_pushstring( L, eventName );
-		lua_setfield( L, -2, CoronaEventTypeKey() );
+		lua_setfield( L, -2, EVENT_PHASE_KEY.UTF8String );
 	}
 
 	lua_pushstring( L, kProviderName );

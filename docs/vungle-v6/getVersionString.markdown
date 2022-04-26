@@ -1,28 +1,22 @@
-# vungle.load()
+# vungle.getVersionString()
 
 > --------------------- ------------------------------------------------------------------------------------------
 > __Type__              [Function][api.type.function]
-> __Return value__      [Boolean][api.type.Boolean]
+> __Return value__      [String][api.type.String]
 > __Revision__          [REVISION_LABEL](REVISION_URL)
 > __Keywords__          ads, advertising, Vungle
-> __See also__          [vungle.init()][plugin.vungle-v6.init]
->						[vungle.*][plugin.vungle-v6]
+> __See also__          [vungle.*][plugin.vungle-v6]
 > --------------------- ------------------------------------------------------------------------------------------
 
 
 ## Overview
 
-`vungle.load()` begins loading a placement video ad.
-
-This API returns a boolean `true` if loading is successful, `false` otherwise.
+Returns the plugin and underlying SDK version numbers as a string.
 
 
 ## Syntax
 
-	vungle.load( placementID )
-
-##### placementID ~^(required)^~
-_[String][api.type.String]._ The placement ID of the ad to load.
+	vungle.getVersionString()
 
 
 ## Example
@@ -48,6 +42,5 @@ end
 -- Initialize the Vungle plugin
 vungle.init( appID, adListener )
 
--- Sometime later, load an ad for a specific placement
-vungle.load( "placementID1" )
+print( vungle.getVersionString() )
 ``````
