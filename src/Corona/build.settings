@@ -16,7 +16,10 @@ settings = {
   },
 
     plugins = {
+      ["plugin.vungle.v6"] =
+        {
+            publisherId = "com.solar2d"
+        },
 
-      
     },
 }

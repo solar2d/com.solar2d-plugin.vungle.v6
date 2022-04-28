@@ -59,7 +59,16 @@ settings =
 		{
 			publisherId = "com.solar2d"
 		},
-	},		
+	},
+	iphone =
+	 {
+			 plist = {
+					 NSUserTrackingUsageDescription = "This would allow the app to advertise better.",
+					 SKAdNetworkItems = {
+							 { SKAdNetworkIdentifier = "gta9lk7p23.skadnetwork" },
+					 },
+			 },
+	 },
 }
 ``````
 

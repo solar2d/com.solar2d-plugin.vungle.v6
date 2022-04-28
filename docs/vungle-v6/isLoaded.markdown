@@ -1,12 +1,12 @@
-# unityads.isLoaded()
+# vungle.isLoaded()
 
 > --------------------- ------------------------------------------------------------------------------------------
 > __Type__              [Function][api.type.Function]
 > __Return value__      [Boolean][api.type.Boolean]
 > __Revision__          [REVISION_LABEL](REVISION_URL)
-> __Keywords__          ads, advertising, Unity Ads, isLoaded
-> __See also__          [unityads.show()][plugin.unityads-v4.show]
->						[unityads.*][plugin.unityads-v4]
+> __Keywords__          ads, advertising, Vungle, isLoaded
+> __See also__          [vungle.show()][plugin.vungle-v6.show]
+>						[vungle.*][plugin.vungle-v6]
 > --------------------- ------------------------------------------------------------------------------------------
 
 
@@ -17,18 +17,25 @@ Returns a [boolean][api.type.Boolean] indicating whether an ad is loaded and rea
 
 ## Syntax
 
-    unityads.isLoaded( placementId )
+    vungle.isLoaded( placementId )
 
 ##### placementId ~^(required)^~
-_[String][api.type.String]._ One of the placement IDs you've configured in the Unity&nbsp;Ads [dashboard](https://unity3d.com/services/ads).
+_[String][api.type.String]._ The placement ID to check if loaded
 
 
 ## Example
 
 ``````lua
-local unityads = require( "plugin.unityads.v4" )
+local vungle = require( "plugin.vungle.v6" )
 
--- Unity Ads listener function
+local appID
+if ( system.getInfo("platform") == "android" ) then
+	appID = "YOUR_ANDROID_APP_ID"
+else
+	appID = "YOUR_IOS_APP_ID"
+end
+
+-- Vungle listener function
 local function adListener( event )
 
 	if ( event.phase == "init" ) then  -- Successful initialization
@@ -36,9 +43,9 @@ local function adListener( event )
 	end
 end
 
--- Initialize the Unity Ads plugin
-unityads.init( adListener, { appId="YOUR_UNITYADS_GAME_ID" } )
+-- Initialize the Vungle plugin
+vungle.init( appID, adListener )
 
 -- Sometime later, check if an ad (placement ID) is ready for display
-print( unityads.isLoaded( "YOUR_UNITYADS_PLACEMENT_ID" ) )
+print( vungle.isLoaded( "placementID1" ) )
 ``````

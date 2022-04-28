@@ -1,14 +1,14 @@
-# event.message
+# event.response
 
 > --------------------- ------------------------------------------------------------------------------------------
 > __Type__              [String][api.type.String]
-> __Event__             [adsRequest][plugin.vungle.event.adsRequest]
+> __Event__             [adsRequest][plugin.vungle-v6.event.adsRequest]
 > __Revision__          [REVISION_LABEL](REVISION_URL)
 > __Keywords__          ads, advertising, Vungle, adsRequest, message
-> __See also__			[adsRequest][plugin.vungle.event.adsRequest]
->						[vungle.*][plugin.vungle]
+> __See also__			[adsRequest][plugin.vungle-v6.event.adsRequest]
+>						[vungle.*][plugin.vungle-v6]
 > --------------------- ------------------------------------------------------------------------------------------
 
 ## Overview
 
-Applies only if [event.type][plugin.vungle.event.adsRequest.type] is `"adLog"` or `"vungleSDKlog"`. In these cases, this property indicates the ad activity message or the SDK event message respectively.
+Return error message string and applies only if [event.isError][plugin.vungle.event.adsRequest.isError] is `"true"`

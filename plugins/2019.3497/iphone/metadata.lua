@@ -8,7 +8,7 @@ local metadata =
 		-- In this case, the static library is called: libSTATIC_LIB_NAME.a
 		staticLibs = { 'plugin_vungle_v6', 'z'},
 
-		frameworks = {  'Accounts', 'AdSupport'},
+		frameworks = {  'Accounts', 'AdSupport', 'VungleSDK'},
 		frameworksOptional = {'WebKit'},
 	},
 }

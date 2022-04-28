@@ -1,12 +1,12 @@
-# unityads.setHasUserConsent()
+# vungle.setHasUserConsent()
 
 > --------------------- ------------------------------------------------------------------------------------------
 > __Type__              [Function][api.type.Function]
 > __Return value__      none
 > __Revision__          [REVISION_LABEL](REVISION_URL)
-> __Keywords__          ads, advertising, unityads, setHasUserConsent
-> __See also__          [unityads.show()][plugin.unityads-v4.show]
->                                        [unityads.*][plugin.unityads-v4]
+> __Keywords__          ads, advertising, Vungle, setHasUserConsent
+> __See also__          [vungle.show()][plugin.vungle-v6.show]
+>                                        [vungle.*][plugin.vungle-v6]
 > --------------------- ------------------------------------------------------------------------------------------
 
 
@@ -16,25 +16,35 @@ UnityAds SDK gives an option to work with GDPR user consent manually. You can se
 
 ## Syntax
 
-	unityads.setHasUserConsent( hasUserConsent )
+	vungle.setHasUserConsent( hasUserConsent [, version] )
 
 ##### hasUserConsent ~^(required)^~
 _[Boolean][api.type.Boolean]._ If the user has consented, please set the following flag to `true`, otherwise set it to `false`.
+
+##### consentMessageVersion ~^(optional)^~
+_[String][api.type.String]._ Optional version string that can be passed indicating the version of your shown consent message users acted on, default value `1.0.0`
 
 
 ## Example
 
 ``````lua
-local unityads = require( "plugin.unityads.v4" )
+local vungle = require( "plugin.vungle.v6" )
 
+local appID
+if ( system.getInfo("platform") == "android" ) then
+	appID = "YOUR_ANDROID_APP_ID"
+else
+	appID = "YOUR_IOS_APP_ID"
+end
+
+-- Vungle listener function
 local function adListener( event )
 
 	if ( event.phase == "init" ) then  -- Successful initialization
-		-- Set user consention
-		unityads.setHasUserConsent( true )
+		vungle.setHasUserConsent( true )
 	end
 end
 
--- Initialize the Unity Ads plugin
-unityads.init( adListener, { appId="YOUR_UNITYADS_GAME_ID" } )
+-- Initialize the Vungle plugin
+vungle.init( appID, adListener )
 ``````
