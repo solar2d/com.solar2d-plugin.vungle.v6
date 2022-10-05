@@ -1,4 +1,4 @@
-rootProject.name = "Corona Native Android"
+rootProject.name = "Vungle"
 include("app", "plugin")
 
 if (settings.hasProperty('coronaExpansionFileName')) {

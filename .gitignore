@@ -4,4 +4,4 @@ plugins/*.tgz
 .gradle/
 .idea/
 build/
-
+BuiltPlugin/

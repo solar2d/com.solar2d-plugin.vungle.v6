@@ -1,5 +1,6 @@
 local widget = require( "widget" )
 local ads = require ( "plugin.vungle.v6" )
+print(ads.getVersionString())
 
 _H = display.contentHeight
 _W = display.contentWidth

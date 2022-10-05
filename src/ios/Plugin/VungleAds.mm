@@ -14,7 +14,6 @@
 #import <VungleSDK/VungleSDK.h>
 #import <VungleSDK/VungleSDKHeaderBidding.h>
 #import <VungleSDK/VungleSDKCreativeTracking.h>
-#import <VungleSDK/VungleSDKNativeAds.h>
 
 #import "CoronaRuntime.h"
 
@@ -37,7 +36,7 @@ static const NSString* AD_LOG_EVENT_PHASE = @"adLog";
 static const NSString* AD_VUNGLE_CREATIVE_EVENT_PHASE = @"adVungleCreative";
 static const NSString* AD_RESPONSE_KEY = @"response";
 
-static const NSString* kVERSION = @"6_10_6";//plugin version. Do not delete this comment
+static const NSString* kVERSION = @"6_12_0";//plugin version. Do not delete this comment
 
 // ----------------------------------------------------------------------------
 
@@ -133,6 +132,8 @@ int Vungle::Open( lua_State *L ) {
         { "closeAd", Vungle::closeAd }, //deperated
 		{ "getVersionString", Vungle::versionString },
 		{ "isLoaded", Vungle::adIsAvailable },
+		{ "updateCOPPAStatus", Vungle::updateCOPPAStatus },
+		{ "updateCCPAStatus", Vungle::updateCCPAStatus },
 		{ "clearCache", Vungle::clearCache }, //hidden
 		{ "clearSleep", Vungle::clearSleep },//hidden
 		{ "debug", Vungle::enableLogging },
@@ -270,10 +271,6 @@ int Vungle::Show(lua_State *L) {
         options[VunglePlayAdOptionKeyFlexViewAutoDismissSeconds] = GetStringParam(lua_tostring(L, -1));
 //        options[VunglePlayAdOptionKeyFlexViewAutoDismissSeconds] = [NSNumber numberWithUnsignedInteger:[GetStringParam(lua_tostring(L, -1)) integerValue]];
     lua_pop(L, 1);
-    lua_getfield(L, 1, "ordinal");
-    if (!lua_isnil(L, -1))
-        options[VunglePlayAdOptionKeyOrdinal] = [NSNumber numberWithUnsignedInteger:[GetStringParam(lua_tostring(L, -1)) integerValue]];
-    lua_pop(L, 1);
     lua_getfield(L, 1, "isSoundEnabled");
     if (!lua_isnil(L, -1)) {
         bool b = lua_toboolean(L, -1);
@@ -392,6 +389,18 @@ int Vungle::adIsAvailable(lua_State* L) {
 	return 1;
 }
 
+int Vungle::updateCCPAStatus(lua_State* L) {
+	[[VungleSDK sharedSDK] updateCCPAStatus:(lua_toboolean(L, 1)?VungleCCPAAccepted:VungleCCPADenied)];
+    return 0;
+}
+
+
+int Vungle::updateCOPPAStatus(lua_State* L) {
+	[[VungleSDK sharedSDK] updateCOPPAStatus:lua_toboolean(L, 1)];
+    return 0;
+}
+
+
 int Vungle::clearCache(lua_State* L) {
     lua_pushboolean(L, true);
     return 1;
@@ -449,7 +458,10 @@ bool Vungle::Init(lua_State *L, NSString* appId, NSMutableArray* placements, int
     if (appId) {
         VungleSDK* sdk = [VungleSDK sharedSDK];
 
-		[sdk performSelector:@selector(setPluginName:version:) withObject:@"corona" withObject:kVERSION];
+		SEL setSDK = @selector(setPluginName:version:);
+		if([sdk respondsToSelector:setSDK]) {
+			[sdk performSelector:setSDK withObject:@"corona" withObject:kVERSION];
+		}
         NSError* err;
         [sdk startWithAppId:appId error:&err];
 		sdk.delegate = _delegate;

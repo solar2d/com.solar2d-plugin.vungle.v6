@@ -3,10 +3,13 @@ local metadata =
 	plugin =
 	{
 		format = 'staticLibrary',
-		staticLibs = { 'plugin_library', },
-		frameworks = {},
-		frameworksOptional = {},
-		-- usesSwift = true,
+
+		-- This is the name without the 'lib' prefix.
+		-- In this case, the static library is called: libSTATIC_LIB_NAME.a
+		staticLibs = { 'plugin_vungle_v6', 'z'},
+
+		frameworks = {  'Accounts', 'AdSupport', 'VungleSDK'},
+		frameworksOptional = {'WebKit'},
 	},
 }
 

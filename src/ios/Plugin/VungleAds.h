@@ -13,7 +13,6 @@
 #import <VungleSDK/VungleSDK.h>
 #import <VungleSDK/VungleSDKHeaderBidding.h>
 #import <VungleSDK/VungleSDKCreativeTracking.h>
-#import <VungleSDK/VungleSDKNativeAds.h>
 
 #include "CoronaLua.h"
 
@@ -62,6 +61,8 @@ class Vungle
         static int setSoundEnabled(lua_State* L);
         static int enableLogging(lua_State* L);
         static int subscribeHB(lua_State* L);
+		static int updateCCPAStatus(lua_State* L);
+		static int updateCOPPAStatus(lua_State* L);
 
 	public:
 		Vungle( id<CoronaRuntime> runtime );

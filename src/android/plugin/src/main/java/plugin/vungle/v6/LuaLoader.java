@@ -57,7 +57,7 @@ import java.util.*;
  */
 public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
 	private static final String TAG = "VungleCorona";
-	private static final String VERSION = "6.10.6";//plugin version. Do not delete this comment
+	private static final String VERSION = "6_12_0";//plugin version. Do not delete this comment
 	private static final Locale LOCALE = Locale.US;
 
 	// LUA method names
@@ -120,6 +120,8 @@ public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
             new UpdateConsentStatusWrapper(),
             new GetConsentStatusWrapper(),  //hidden
             new GetConsentMessageVersionWrapper(), //hidden
+            new COPPAWrapper(),
+            new CCPAWrapper(),
             new CloseWrapper(), //deperated
             new ClearCacheWrapper(),//hidden
             new ClearSleepWrapper(),//hidden
@@ -239,6 +241,29 @@ public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
 		luaState.pushBoolean(true);
 		return 1;
 	}
+
+    private class COPPAWrapper implements NamedJavaFunction {
+        @Override
+        public String getName() {
+            return "updateCOPPAStatus";
+        }
+        @Override
+        public int invoke(LuaState luaState) {
+            Vungle.updateUserCoppaStatus(luaState.toBoolean(1));
+            return 0;
+        }
+    }
+    private class CCPAWrapper implements NamedJavaFunction {
+        @Override
+        public String getName() {
+            return "updateCCPAStatus";
+        }
+        @Override
+        public int invoke(LuaState luaState) {
+            Vungle.updateCCPAStatus(luaState.toBoolean(1)?Vungle.Consent.OPTED_IN:Vungle.Consent.OPTED_OUT);
+            return 0;
+        }
+    }
 
 	private class GetVersionStringWrapper implements NamedJavaFunction {
 		private GetVersionStringWrapper() {}
@@ -459,7 +484,7 @@ public class LuaLoader implements JavaFunction, CoronaRuntimeListener {
                 String ordinal = luaState.toString(-1);
                 try {
                     adConfig.setOrdinal(Integer.parseInt(ordinal));
-                } catch (Exception e) {}
+                } catch (Exception ignore) {}
             }
             luaState.pop(1);
         }
